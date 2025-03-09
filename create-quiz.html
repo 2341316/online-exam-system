@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Create Quiz</h1>
+        <nav>
+            <a href="index.html" class="btn secondary">Home</a>
+            <a href="join-quiz.html" class="btn secondary">Join Quiz</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Enter Quiz Questions</h2>
+        <form id="quizForm">
+            <div id="questionList"></div>
+            <button type="button" id="addQuestion">Add Question</button>
+            <button type="submit">Generate Quiz Code</button>
+        </form>
+        <div id="quizCodeSection" style="display:none;">
+            <h3>Your Quiz Code: <span id="quizCode"></span></h3>
+            <p>Share this code with participants to join your quiz.</p>
+        </div>
+    </main>
+
+    <script>
+        $(document).ready(function() {
+            $("#addQuestion").click(function() {
+                $("#questionList").append(`
+                    <div class="question">
+                        <input type="text" placeholder="Enter question" class="questionText">
+                        <input type="file" class="questionImage">
+                        <input type="text" placeholder="Option 1" class="option">
+                        <input type="text" placeholder="Option 2" class="option">
+                        <input type="text" placeholder="Option 3" class="option">
+                        <input type="text" placeholder="Option 4" class="option">
+                        <select class="correctOption">
+                            <option value="">Select Correct Answer</option>
+                            <option value="1">Option 1</option>
+                            <option value="2">Option 2</option>
+                            <option value="3">Option 3</option>
+                            <option value="4">Option 4</option>
+                        </select>
+                        <button type="button" class="removeQuestion">Remove</button>
+                    </div>
+                `);
+            });
+    
+            // Remove question on click
+            $(document).on("click", ".removeQuestion", function() {
+                $(this).parent(".question").remove();
+            });
+    
+            $("#quizForm").submit(function(e) {
+                e.preventDefault();
+    
+                let quizData = [];
+                let valid = true;
+    
+                $(".question").each(function() {
+                    let questionText = $(this).find(".questionText").val().trim();
+                    let options = $(this).find(".option").map(function() { return $(this).val().trim(); }).get();
+                    let correctAnswer = $(this).find(".correctOption").val();
+    
+                    // Validation: Check if question text is empty
+                    if (questionText === "") {
+                        alert("Each question must have a text.");
+                        valid = false;
+                        return false;
+                    }
+    
+                    // Validation: Check if all options are filled
+                    if (options.some(opt => opt === "")) {
+                        alert("All options must be filled.");
+                        valid = false;
+                        return false;
+                    }
+    
+                    // Validation: Ensure correct answer is selected
+                    if (correctAnswer === "") {
+                        alert("Please select the correct answer.");
+                        valid = false;
+                        return false;
+                    }
+    
+                    // Store quiz data
+                    quizData.push({ question: questionText, options: options, answer: correctAnswer });
+                });
+    
+                // Validation: Ensure at least one question is added
+                if (quizData.length === 0) {
+                    alert("Please add at least one question before saving the quiz.");
+                    return;
+                }
+    
+                if (!valid) return;
+    
+                let quizCode = Math.random().toString(36).substr(2, 6).toUpperCase();
+                localStorage.setItem(`quiz_${quizCode}`, JSON.stringify(quizData));
+    
+                $("#quizCode").text(quizCode);
+                $("#quizCodeSection").show();
+            });
+        });
+    </script>    
+</body>
+</html>
