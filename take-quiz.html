@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Take Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Take Quiz</h1>
+        <nav>
+            <a href="index.html" class="btn secondary">Home</a>
+            <a href="create-quiz.html" class="btn secondary">Create Quiz</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Answer the Quiz</h2>
+        <form id="quizAttempt">
+            <div id="quizQuestions"></div>
+            <button type="submit">Submit Quiz</button>
+        </form>
+    </main>
+
+    <script>
+        $(document).ready(function() {
+            let params = new URLSearchParams(window.location.search);
+            let quizCode = params.get("code");
+
+            let userName = localStorage.getItem("currentUserName");
+            let userEmail = localStorage.getItem("currentUserEmail");
+
+            if (!userName || !userEmail) {
+                alert("You must enter your Name and Email before taking the quiz.");
+                window.location.href = "join-quiz.html";
+                return;
+            }
+
+            let quizData = JSON.parse(localStorage.getItem(`quiz_${quizCode}`));
+
+            if (quizData) {
+                quizData.forEach((q, index) => {
+                    let optionsHTML = q.options.map((opt, i) => `
+                        <label>
+                            <input type="radio" name="q${index}" value="${i+1}">
+                            ${opt}
+                        </label>
+                    `).join("<br>");
+
+                    let mediaHTML = "";
+                    if (q.file) {
+                        if (q.file.startsWith("data:image")) {
+                            mediaHTML = `<img src="${q.file}" alt="Question Image" class="question-image">`;
+                        } else if (q.file.startsWith("data:audio")) {
+                            mediaHTML = `<audio controls><source src="${q.file}" type="audio/mp3">Your browser does not support the audio element.</audio>`;
+                        }
+                    }
+
+                    $("#quizQuestions").append(`
+                        <div class="quiz-box">
+                            <p><strong>${q.question}</strong></p>
+                            ${mediaHTML}
+                            ${optionsHTML}
+                        </div>
+                    `);
+                });
+            } else {
+                alert("Invalid Quiz Code! Redirecting to home...");
+                window.location.href = "index.html";
+            }
+
+            // ✅ Quiz Submission and Redirect to Results Page
+            $("#quizAttempt").submit(function(e) {
+                e.preventDefault();
+                let score = 0;
+
+                quizData.forEach((q, index) => {
+                    let selectedOption = $(`input[name=q${index}]:checked`).val();
+                    if (selectedOption == q.answer) {
+                        score++;
+                    }
+                });
+
+                // ✅ Save the result in localStorage
+                localStorage.setItem(`result_${quizCode}_${userEmail}`, score);
+
+                alert(`Your Score: ${score}/${quizData.length}`);
+
+                // ✅ Redirect to results page after submission
+                window.location.href = `result.html?code=${quizCode}&email=${userEmail}`;
+            });
+        });
+    </script>        
+</body>
+</html>

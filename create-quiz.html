@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Create Quiz</h1>
+        <nav>
+            <a href="index.html" class="btn secondary">Home</a>
+            <a href="join-quiz.html" class="btn secondary">Join Quiz</a>
+        </nav>
+    </header>
+    <main>
+        <h2>Enter Quiz Questions</h2>
+        <form id="quizForm">
+            <div id="questionList"></div>
+            <button type="button" id="addQuestion">Add Question</button>
+            <button type="submit">Generate Quiz Code</button>
+        </form>
+        <div id="quizCodeSection" style="display:none;">
+            <h3>Your Quiz Code: <span id="quizCode"></span></h3>
+            <p>Share this code with participants to join your quiz.</p>
+        </div>
+    </main>
+
+    <script>
+        $(document).ready(function() {
+            $("#addQuestion").click(function() {
+                $("#questionList").append(`
+                    <div class="question">
+                        <input type="text" placeholder="Enter question" class="questionText" required>
+                        <input type="file" class="questionFile" accept="image/*,audio/*">
+                        <input type="text" placeholder="Option 1" class="option" required>
+                        <input type="text" placeholder="Option 2" class="option" required>
+                        <input type="text" placeholder="Option 3" class="option" required>
+                        <input type="text" placeholder="Option 4" class="option" required>
+                        <select class="correctOption" required>
+                            <option value="">Select Correct Answer</option>
+                            <option value="1">Option 1</option>
+                            <option value="2">Option 2</option>
+                            <option value="3">Option 3</option>
+                            <option value="4">Option 4</option>
+                        </select>
+                        <button type="button" class="removeQuestion">Remove</button>
+                    </div>
+                `);
+            });
+
+            // Remove question on click
+            $(document).on("click", ".removeQuestion", function() {
+                $(this).parent(".question").remove();
+            });
+
+            $("#quizForm").submit(async function(e) {
+                e.preventDefault();
+
+                let quizData = [];
+                let fileUploadPromises = [];
+                let valid = true;
+                let maxFileSize = 500 * 1024; // 500KB limit for localStorage
+
+                let questions = $(".question");
+                if (questions.length === 0) {
+                    alert("Please add at least one question before saving the quiz.");
+                    return;
+                }
+
+                // Collect all question data
+                questions.each(function(index) {
+                    let questionText = $(this).find(".questionText").val().trim();
+                    let fileInput = $(this).find(".questionFile")[0].files[0];
+                    let options = $(this).find(".option").map(function() { return $(this).val().trim(); }).get();
+                    let correctAnswer = $(this).find(".correctOption").val();
+                    let fileDataPromise = Promise.resolve("");
+
+                    if (questionText === "" || options.some(opt => opt === "") || correctAnswer === "") {
+                        alert("Please complete all fields before submitting.");
+                        valid = false;
+                    }
+
+                    if (fileInput) {
+                        if (fileInput.size > maxFileSize) {
+                            alert("File is too large! Please upload a file smaller than 500KB.");
+                            valid = false;
+                        } else {
+                            let filePromise = new Promise((resolve) => {
+                                let reader = new FileReader();
+                                reader.onload = function(event) {
+                                    resolve({ index: index, fileData: event.target.result });
+                                };
+                                reader.readAsDataURL(fileInput);
+                            });
+                            fileUploadPromises.push(filePromise);
+                        }
+                    }
+
+                    quizData.push({ 
+                        question: questionText, 
+                        options: options, 
+                        answer: correctAnswer,
+                        file: "" // Placeholder, will update after Promise resolves
+                    });
+                });
+
+                if (!valid) return;
+
+                let fileResults = await Promise.all(fileUploadPromises);
+                
+                // Ensure the correct file is linked to the correct question
+                fileResults.forEach(result => {
+                    quizData[result.index].file = result.fileData;
+                });
+
+                try {
+                    let quizCode = Math.random().toString(36).substr(2, 6).toUpperCase();
+                    localStorage.setItem(`quiz_${quizCode}`, JSON.stringify(quizData));
+
+                    $("#quizCode").text(quizCode);
+                    $("#quizCodeSection").show();
+                } catch (error) {
+                    alert("Error saving quiz. Large files cannot be stored in localStorage.");
+                }
+            });
+        });
+    </script>    
+</body>
+</html>
